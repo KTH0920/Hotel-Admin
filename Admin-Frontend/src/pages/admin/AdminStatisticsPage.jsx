@@ -38,8 +38,10 @@ const AdminStatisticsPage = () => {
     try {
       setLoading(true);
       const data = await adminStatsApi.getStatistics();
+      console.log("통계 데이터:", data);
       setStats(data);
     } catch (err) {
+      console.error("통계 로드 에러:", err);
       setError(err.message || "통계를 불러오는데 실패했습니다.");
     } finally {
       setLoading(false);
@@ -51,8 +53,10 @@ const AdminStatisticsPage = () => {
       setChartLoading(true);
       setPeriod(nextPeriod);
       const data = await adminStatsApi.getRevenueStats(nextPeriod);
+      console.log("매출 추이 데이터:", data);
       setRevenueTrend(data);
     } catch (err) {
+      console.error("매출 추이 로드 에러:", err);
       setError(err.message || "매출 추이를 불러오는데 실패했습니다.");
     } finally {
       setChartLoading(false);
@@ -71,12 +75,18 @@ const AdminStatisticsPage = () => {
     return `${(value * 100).toFixed(1)}%`;
   };
 
+  const formatNumber = (value) => {
+    return new Intl.NumberFormat("ko-KR").format(value || 0);
+  };
+
   const chartData =
-    revenueTrend?.labels.map((label, index) => ({
-      period: label,
-      revenue: revenueTrend.revenue?.[index] ?? 0,
-      bookings: revenueTrend.bookings?.[index] ?? 0,
-    })) || [];
+    revenueTrend?.labels && Array.isArray(revenueTrend.labels)
+      ? revenueTrend.labels.map((label, index) => ({
+          period: label,
+          revenue: revenueTrend.revenue?.[index] ?? 0,
+          bookings: revenueTrend.bookings?.[index] ?? 0,
+        }))
+      : [];
 
   if (loading && !stats) return <Loader fullScreen />;
   if (error && !stats) return <ErrorMessage message={error} onRetry={fetchStats} />;
@@ -84,6 +94,7 @@ const AdminStatisticsPage = () => {
   // 총 매출 계산 (전체 누적 매출 우선, 없으면 올해 매출)
   const totalRevenue = stats?.totalRevenue || stats?.thisYear?.revenue || 0;
 
+  // 매출 통계 카드
   const summaryCards = stats
     ? [
         {
@@ -94,14 +105,14 @@ const AdminStatisticsPage = () => {
         },
         {
           title: "오늘 매출",
-          value: formatCurrency(stats.today.revenue),
-          delta: stats.today.change?.revenue,
+          value: formatCurrency(stats.today?.revenue || 0),
+          delta: stats.today?.change?.revenue,
           subtitle: "전일 대비",
         },
         {
           title: "이번 달 매출",
-          value: formatCurrency(stats.thisMonth.revenue),
-          delta: stats.thisMonth.change?.revenue,
+          value: formatCurrency(stats.thisMonth?.revenue || 0),
+          delta: stats.thisMonth?.change?.revenue,
           subtitle: "전월 대비",
         },
         {
@@ -122,26 +133,35 @@ const AdminStatisticsPage = () => {
         </div>
       </div>
 
-      <div className="stats-summary-grid">
-        {summaryCards.map((card) => (
-          <div className="summary-card" key={card.title}>
-            <div className="summary-card__header">
-              <div>
-                <p>{card.title}</p>
-                {card.subtitle && <span className="summary-card__subtitle">{card.subtitle}</span>}
+      {summaryCards.length > 0 ? (
+        <div className="stats-summary-grid">
+          {summaryCards.map((card) => (
+            <div className="summary-card" key={card.title}>
+              <div className="summary-card__header">
+                <div>
+                  <p>{card.title}</p>
+                  {card.subtitle && <span className="summary-card__subtitle">{card.subtitle}</span>}
+                </div>
+                {card.delta !== undefined && card.delta !== null && (
+                  <span className={`delta ${card.invert && card.delta < 0 ? "positive" : card.delta >= 0 ? "positive" : "negative"}`}>
+                    {card.delta >= 0 ? "+" : ""}
+                    {(card.delta * 100).toFixed(1)}%
+                  </span>
+                )}
+                {card.icon && <span className="summary-card__icon">{card.icon}</span>}
               </div>
-              {card.delta !== undefined && (
-                <span className={`delta ${card.invert && card.delta < 0 ? "positive" : card.delta >= 0 ? "positive" : "negative"}`}>
-                  {card.delta >= 0 ? "+" : ""}
-                  {(card.delta * 100).toFixed(1)}%
-                </span>
-              )}
-              {card.icon && <span className="summary-card__icon">{card.icon}</span>}
+              <p className="summary-card__value">{card.value}</p>
             </div>
-            <p className="summary-card__value">{card.value}</p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="card" style={{ padding: "2rem", textAlign: "center" }}>
+          <p style={{ color: "#64748b" }}>통계 데이터를 불러올 수 없습니다.</p>
+          <button className="btn btn-primary" onClick={fetchStats} style={{ marginTop: "1rem" }}>
+            다시 시도
+          </button>
+        </div>
+      )}
 
       {stats?.hotels && stats.hotels.length > 0 && (
         <div className="statistics-section card">

@@ -21,8 +21,16 @@ export const register = async (req, res) => {
 // 2. 로그인
 export const login = async (req, res) => {
     try {
+        console.log('🔐 로그인 시도:', { email: req.body.email });
         const { email, password } = req.body;
+        
+        if (!email || !password) {
+            console.log('❌ 이메일 또는 비밀번호가 없음');
+            return res.status(400).json(errorResponse("이메일과 비밀번호를 입력해주세요.", 400));
+        }
+        
         const { admin, token } = await authService.login(email, password);
+        console.log('✅ 로그인 성공:', { email: admin.email, role: admin.role });
 
         res.status(200).json(successResponse({
             token,
@@ -35,6 +43,7 @@ export const login = async (req, res) => {
         }, "로그인 성공"));
 
     } catch (error) {
+        console.error('❌ 로그인 에러:', error.message);
         res.status(401).json(errorResponse(error.message, 401));
     }
 };

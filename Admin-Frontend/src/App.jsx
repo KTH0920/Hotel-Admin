@@ -5,7 +5,12 @@ import "./styles/index.scss";
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <AdminAuthProvider>
         <Routes>
           <Route path="/" element={<Navigate to="/admin/login" replace />} />

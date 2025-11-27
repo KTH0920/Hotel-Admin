@@ -22,23 +22,41 @@ dotenv.config();
 connectDB();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// CORS 설정 - Frontend origin 허용
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// 요청 로깅 미들웨어 (디버깅용) - 라우트 등록 전에 배치
+app.use((req, res, next) => {
+    console.log(`📥 ${req.method} ${req.originalUrl} - ${req.url}`);
+    console.log(`   Headers:`, req.headers);
+    console.log(`   Body:`, req.body);
+    next();
+});
+
 // === API 연결 ===
-app.use('/api/auth', authRoutes);
-app.use('/api/businesses', businessRoutes);
+// Admin 전용 API 경로
+app.use('/api/admin/auth', authRoutes);
+app.use('/api/admin/businesses', businessRoutes);
+app.use('/api/admin/lodgings', lodgingRoutes);
+app.use('/api/admin/reviews', reviewRoutes);
+app.use('/api/admin/promotions', promotionRoutes);
+app.use('/api/admin/dashboard', dashboardRoutes);
+
+// 일반 API 경로 (필요시)
 app.use('/api/users', userRoutes);
-app.use('/api/lodgings', lodgingRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/bookings', bookingRoutes);
-app.use('/api/reviews', reviewRoutes);
 app.use('/api/categories', categoryRoutes);
-app.use('/api/promotions', promotionRoutes);
-app.use('/api/dashboard', dashboardRoutes);
 
 // 기본 경로
 app.get('/', (req, res) => {
@@ -47,9 +65,13 @@ app.get('/', (req, res) => {
 
 // 404 에러 처리
 app.use((req, res, next) => {
+    console.log(`❌ 404 - 경로를 찾을 수 없음: ${req.method} ${req.path}`);
     res.status(404).json(errorResponse("API 경로를 찾을 수 없습니다.", 404));
 });
 
 app.listen(PORT, () => {
     console.log(`🚀 Server is running on port ${PORT}`);
+    console.log(`📡 CORS 설정: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+    console.log(`🔗 API 엔드포인트: http://localhost:${PORT}/api/admin/auth/login`);
+    console.log(`✅ 모든 요청이 로깅됩니다.`);
 });

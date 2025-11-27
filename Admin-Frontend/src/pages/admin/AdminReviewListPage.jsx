@@ -16,9 +16,13 @@ const AdminReviewListPage = () => {
   const fetchReviews = async () => {
     try {
       const data = await adminReviewApi.getReviews();
-      setReviews(data.reviews);
+      console.log("리뷰 데이터:", data);
+      // Backend 응답 형식: 배열 또는 { reviews: [...] }
+      const reviewsList = Array.isArray(data) ? data : (data.reviews || data.data || []);
+      setReviews(reviewsList);
     } catch (error) {
       console.error("Failed to fetch reviews:", error);
+      setAlertModal({ isOpen: true, message: error.message || "리뷰를 불러오는데 실패했습니다.", type: "error" });
     } finally {
       setLoading(false);
     }
@@ -59,7 +63,11 @@ const AdminReviewListPage = () => {
   };
 
   // 관리자는 신고된 리뷰만 확인
-  const filteredReviews = reviews.filter((review) => review.status === "reported");
+  // Backend의 status는 'reported', 'active', 'hidden' 등
+  const filteredReviews = reviews.filter((review) => {
+    const status = review.status;
+    return status === "reported";
+  });
 
   const getStatusText = (status) => {
     const statusMap = {
@@ -102,7 +110,7 @@ const AdminReviewListPage = () => {
           ) : (
             filteredReviews.map((review) => (
             <div
-              key={review.id}
+              key={review._id || review.id}
               style={{
                 padding: "1rem",
                 border: "1px solid #e2e8f0",
@@ -118,7 +126,7 @@ const AdminReviewListPage = () => {
                 }}
               >
                 <p style={{ color: "#64748b", fontSize: "0.875rem" }}>
-                  {review.guestName} · {review.roomType} · {review.date}
+                  {review.user?.name || "고객"} · {review.lodging?.name || "숙소"} · {new Date(review.createdAt).toLocaleDateString()}
                 </p>
                 <span className={`status-badge ${review.status}`}>
                   {getStatusText(review.status)}
@@ -135,7 +143,7 @@ const AdminReviewListPage = () => {
               </div>
 
               <p style={{ fontSize: "0.875rem", color: "#0f172a", marginBottom: "1rem" }}>
-                {review.comment}
+                {review.content || review.comment}
               </p>
 
               {review.status === "reported" && review.reportReason && (
@@ -154,9 +162,9 @@ const AdminReviewListPage = () => {
                   <p style={{ fontSize: "0.875rem", color: "#7f1d1d", marginBottom: "0.25rem" }}>
                     {review.reportReason}
                   </p>
-                  {review.reportedBy && (
+                  {review.reportReason && (
                     <p style={{ fontSize: "0.75rem", color: "#991b1b" }}>
-                      신고자: {review.reportedBy} · {review.reportedAt || review.date}
+                      신고 일시: {new Date(review.updatedAt).toLocaleDateString()}
                     </p>
                   )}
                 </div>
@@ -181,14 +189,14 @@ const AdminReviewListPage = () => {
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                 <button
                   className="btn btn-danger"
-                  onClick={() => openConfirmDialog(review.id, "approve")}
+                  onClick={() => openConfirmDialog(review._id || review.id, "approve")}
                 >
                   신고 승인 (리뷰 삭제)
                 </button>
                 <button
                   className="btn"
                   style={{ backgroundColor: "#10b981", color: "#ffffff" }}
-                  onClick={() => openConfirmDialog(review.id, "reject")}
+                  onClick={() => openConfirmDialog(review._id || review.id, "reject")}
                 >
                   신고 거부 (리뷰 복원)
                 </button>

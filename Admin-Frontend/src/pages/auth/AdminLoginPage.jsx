@@ -74,9 +74,12 @@ const AdminLoginPage = () => {
     setLoading(true);
 
     try {
+      console.log("로그인 시도:", formData.email);
       await login(formData);
+      console.log("로그인 성공, 대시보드로 이동");
       navigate("/admin/dashboard");
     } catch (err) {
+      console.error("로그인 에러:", err);
       setError(err.message || "로그인에 실패했습니다.");
     } finally {
       setLoading(false);
@@ -102,6 +105,7 @@ const AdminLoginPage = () => {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="enter your email..."
+                autoComplete="email"
                 required
               />
             </div>
@@ -115,6 +119,7 @@ const AdminLoginPage = () => {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="enter your password..."
+                autoComplete="current-password"
                 required
               />
             </div>
