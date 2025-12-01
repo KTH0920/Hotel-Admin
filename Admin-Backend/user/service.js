@@ -1,7 +1,7 @@
 import User from './model.js';
 
-// 서비스 1: 회원 목록 조회 (이메일/이름 검색 포함)
-export const getUsers = async (email, name) => {
+// 서비스 1: 회원 목록 조회 (이메일/이름 검색 포함, role 필터링)
+export const getUsers = async (email, name, role) => {
     let filter = {};
 
     if (email) {
@@ -11,6 +11,14 @@ export const getUsers = async (email, name) => {
     if (name) {
         // 이름 검색: 부분 일치 (regex)
         filter.name = { $regex: name, $options: 'i' };
+    }
+
+    // role 필터링: role이 지정되지 않았거나 'user'인 경우만 조회 (일반 유저만)
+    if (role !== undefined) {
+        filter.role = role;
+    } else {
+        // 기본적으로 business가 아닌 유저만 조회 (일반 유저)
+        filter.role = { $ne: 'business' };
     }
 
     // 비밀번호 제외하고 조회, 최신 가입순

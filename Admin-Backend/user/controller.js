@@ -4,8 +4,8 @@ import { successResponse, errorResponse } from '../common/response.js';
 // 1. 전체 회원 조회 (검색)
 export const getAllUsers = async (req, res) => {
     try {
-        const { email, name } = req.query;
-        const users = await userService.getUsers(email, name);
+        const { email, name, role } = req.query;
+        const users = await userService.getUsers(email, name, role);
 
         res.status(200).json(successResponse(users, "회원 목록 조회 성공"));
     } catch (error) {

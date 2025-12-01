@@ -5,6 +5,7 @@ import { adminStatsApi } from "../../api/adminStatsApi";
 import { adminCouponApi } from "../../api/adminCouponApi";
 import { adminReviewApi } from "../../api/adminReviewApi";
 import { adminBusinessApi } from "../../api/adminBusinessApi";
+import { adminUserApi } from "../../api/adminUserApi";
 import Loader from "../../components/common/Loader";
 import ErrorMessage from "../../components/common/ErrorMessage";
 
@@ -55,10 +56,12 @@ const SettingsIcon = () => (
   </svg>
 );
 
-const ProfileIcon = () => (
+const UsersIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-    <circle cx="12" cy="7" r="4"></circle>
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="9" cy="7" r="4"></circle>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
   </svg>
 );
 
@@ -72,6 +75,7 @@ const AdminDashboardPage = () => {
     business: null,
     coupons: null,
     reviews: null,
+    users: null,
   });
 
   useEffect(() => {
@@ -81,11 +85,12 @@ const AdminDashboardPage = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [stats, businessData, couponsData, reviewsData] = await Promise.all([
+      const [stats, businessData, couponsData, reviewsData, usersData] = await Promise.all([
         adminStatsApi.getStatistics(),
         adminBusinessApi.getOwners(),
         adminCouponApi.getCoupons(),
         adminReviewApi.getReviews(),
+        adminUserApi.getUsers(),
       ]);
 
       setDashboardData({
@@ -93,6 +98,7 @@ const AdminDashboardPage = () => {
         business: businessData,
         coupons: couponsData,
         reviews: reviewsData,
+        users: usersData,
       });
     } catch (err) {
       setError(err.message || "데이터를 불러오는데 실패했습니다.");
@@ -112,10 +118,10 @@ const AdminDashboardPage = () => {
   if (loading) return <Loader fullScreen />;
   if (error) return <ErrorMessage message={error} onRetry={fetchDashboardData} />;
 
-  const { statistics, business, coupons, reviews } = dashboardData;
+  const { statistics, business, coupons, reviews, users } = dashboardData;
 
   // 데이터가 없으면 빈 화면 방지
-  if (!statistics && !business && !coupons && !reviews) {
+  if (!statistics && !business && !coupons && !reviews && !users) {
     return (
       <div className="business-dashboard-page">
         <div className="page-header">
@@ -151,14 +157,14 @@ const AdminDashboardPage = () => {
   const approvedReviews = allReviews.filter((r) => r.status === "approved").length;
   const rejectedReviews = allReviews.filter((r) => r.status === "rejected").length;
 
-  // 내 정보 카드의 stats 배열 생성
-  const profileStats = adminInfo
-    ? [
-        { label: "이름", value: adminInfo.name || "관리자" },
-        { label: "이메일", value: adminInfo.email || "-" },
-        { label: "전화번호", value: adminInfo.phone || "-" },
-      ]
-    : [{ label: "로딩 중...", value: "" }];
+  // 회원 데이터
+  const allUsers = Array.isArray(users) ? users : [];
+  const totalUsers = allUsers.length;
+  const activeUsers = allUsers.filter((u) => u.status === "active").length;
+  const bannedUsers = allUsers.filter((u) => u.status === "banned").length;
+  
+  // 사업자 유저 수 (business 데이터에서)
+  const totalBusinessUsers = totalOwners;
 
   const dashboardCards = [
     {
@@ -211,6 +217,19 @@ const AdminDashboardPage = () => {
       color: "#EF4444",
     },
     {
+      id: "users",
+      title: "회원 관리",
+      icon: <UsersIcon />,
+      path: "/admin/users",
+      stats: [
+        { label: "일반 유저", value: `${formatNumber(totalUsers)}명` },
+        { label: "사업자 유저", value: `${formatNumber(totalBusinessUsers)}명` },
+        { label: "활성 유저", value: `${formatNumber(activeUsers)}명` },
+        { label: "정지 유저", value: `${formatNumber(bannedUsers)}명`, highlight: bannedUsers > 0 },
+      ],
+      color: "#10B981",
+    },
+    {
       id: "settings",
       title: "설정",
       icon: <SettingsIcon />,
@@ -222,14 +241,6 @@ const AdminDashboardPage = () => {
         { label: "알림 설정", value: "설정", path: "/admin/settings?tab=notifications" },
       ],
       color: "#8B5CF6",
-    },
-    {
-      id: "profile",
-      title: "내 정보",
-      icon: <ProfileIcon />,
-      path: "/admin/profile",
-      stats: profileStats,
-      color: "#10B981",
     },
   ];
 

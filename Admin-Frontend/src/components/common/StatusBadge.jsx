@@ -56,6 +56,17 @@ const StatusBadge = ({ status, type = "booking" }) => {
       );
     }
 
+    if (type === "user") {
+      const statusMap = {
+        active: { label: "활성", className: "badge-success" },
+        banned: { label: "정지", className: "badge-danger" },
+        inactive: { label: "비활성", className: "badge-secondary" },
+      };
+      return (
+        statusMap[status] || { label: status, className: "badge-secondary" }
+      );
+    }
+
     return { label: status, className: "badge-secondary" };
   };
 

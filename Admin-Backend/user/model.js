@@ -32,6 +32,11 @@ const userSchema = new mongoose.Schema({
     provider: {
         type: String,
         default: 'local',
+    },
+    role: {
+        type: String,
+        enum: ['user', 'business'],
+        default: 'user',
     }
 }, {
     timestamps: true

@@ -13,6 +13,7 @@ import AdminReviewListPage from "../pages/admin/AdminReviewListPage";
 import AdminReviewDetailPage from "../pages/admin/AdminReviewDetailPage";
 import AdminSettingsPage from "../pages/admin/AdminSettingsPage";
 import AdminMyProfilePage from "../pages/admin/AdminMyProfilePage";
+import AdminUserManagementPage from "../pages/admin/AdminUserManagementPage";
 
 const adminRoutes = [
   {
@@ -38,6 +39,10 @@ const adminRoutes = [
       {
         path: "dashboard",
         element: <AdminDashboardPage />,
+      },
+      {
+        path: "users",
+        element: <AdminUserManagementPage />,
       },
       {
         path: "coupons",
