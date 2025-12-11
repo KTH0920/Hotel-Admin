@@ -4,10 +4,45 @@ import { successResponse, errorResponse } from '../common/response.js';
 // 1. 목록 조회
 export const getAllBusinesses = async (req, res) => {
     try {
-        const { status } = req.query; // ?status=pending
-        const businesses = await businessService.getBusinesses(status);
+        const { status, search } = req.query;
+        
+        // status 필터링 (all인 경우 필터링하지 않음)
+        const statusFilter = status && status !== 'all' ? status : undefined;
+        const businesses = await businessService.getBusinesses(statusFilter, search);
 
-        res.status(200).json(successResponse(businesses, "사업자 목록 조회 성공"));
+        // 통계 계산
+        const totalOwners = businesses.length;
+        const activeOwners = businesses.filter(b => b.status === 'approved').length;
+        const pendingOwners = businesses.filter(b => b.status === 'pending').length;
+        const suspendedOwners = businesses.filter(b => b.status === 'suspended').length;
+        
+        // 프론트엔드가 기대하는 형식으로 변환
+        const owners = businesses.map(business => ({
+            id: business._id || business.id,
+            name: business.name,
+            email: business.email,
+            phone: business.phoneNumber || business.phone,
+            companyName: business.companyName,
+            businessNumber: business.businessNumber,
+            status: business.status,
+            joinedAt: business.createdAt ? new Date(business.createdAt).toLocaleDateString() : '-',
+            totalHotels: 0, // 호텔 정보는 별도로 조회 필요
+            hotels: [], // 호텔 정보는 별도로 조회 필요
+        }));
+
+        const summary = {
+            totalOwners,
+            activeOwners,
+            pendingOwners,
+            suspendedOwners,
+            totalHotels: 0, // 호텔 정보는 별도로 조회 필요
+            riskHotels: 0, // 호텔 정보는 별도로 조회 필요
+        };
+
+        res.status(200).json(successResponse({
+            owners,
+            summary
+        }, "사업자 목록 조회 성공"));
     } catch (error) {
         res.status(500).json(errorResponse(error.message, 500));
     }

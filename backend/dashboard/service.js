@@ -1,188 +1,131 @@
 // 다른 도메인의 모델들을 불러옵니다. (확장자 .js 필수!)
 import User from '../user/model.js';
 import Business from '../business/model.js';
-import Booking from '../booking/model.js';
 import Review from '../review/model.js';
+import Promotion from '../promotion/model.js';
 
-// 서비스: 대시보드 통계 데이터 조회
+// 서비스: 종합 운영 통계 데이터 조회
 export const getStats = async () => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const yearStart = new Date(now.getFullYear(), 0, 1);
 
-    // 완료된 예약만 매출에 포함 (status: 'completed', paymentStatus: 'paid')
-    const completedBookingsFilter = {
-        status: 'completed',
-        paymentStatus: 'paid'
-    };
-
     // Promise.all을 사용하여 병렬로 실행
     const [
-        userCount,
-        pendingBusinessCount,
-        bookingCount,
-        reviewCount,
-        totalRevenueResult,
-        todayRevenueResult,
-        monthRevenueResult,
-        yearRevenueResult,
-        todayBookings,
-        monthBookings,
-        yearBookings
+        // 회원 통계
+        totalUsers,
+        activeUsers,
+        todayNewUsers,
+        monthNewUsers,
+        yearNewUsers,
+        // 사업자 통계
+        totalBusinesses,
+        pendingBusinesses,
+        approvedBusinesses,
+        todayNewBusinesses,
+        monthNewBusinesses,
+        // 리뷰 통계
+        totalReviews,
+        averageRatingResult,
+        reportedReviews,
+        todayNewReviews,
+        monthNewReviews,
+        // 쿠폰 통계
+        totalPromotions,
+        activePromotions,
+        expiredPromotions
     ] = await Promise.all([
+        // 회원 통계
         User.countDocuments(),
+        User.countDocuments({ status: 'active' }),
+        User.countDocuments({ createdAt: { $gte: todayStart } }),
+        User.countDocuments({ createdAt: { $gte: monthStart } }),
+        User.countDocuments({ createdAt: { $gte: yearStart } }),
+        // 사업자 통계
+        Business.countDocuments(),
         Business.countDocuments({ status: 'pending' }),
-        Booking.countDocuments(),
+        Business.countDocuments({ status: 'approved' }),
+        Business.countDocuments({ createdAt: { $gte: todayStart } }),
+        Business.countDocuments({ createdAt: { $gte: monthStart } }),
+        // 리뷰 통계
         Review.countDocuments(),
-        // 총 매출 (전체 완료된 예약)
-        Booking.aggregate([
-            { $match: completedBookingsFilter },
-            { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+        Review.aggregate([
+            { $group: { _id: null, avg: { $avg: '$rating' } } }
         ]),
-        // 오늘 매출
-        Booking.aggregate([
-            {
-                $match: {
-                    ...completedBookingsFilter,
-                    createdAt: { $gte: todayStart }
-                }
-            },
-            { $group: { _id: null, total: { $sum: '$totalPrice' } } }
-        ]),
-        // 이번 달 매출
-        Booking.aggregate([
-            {
-                $match: {
-                    ...completedBookingsFilter,
-                    createdAt: { $gte: monthStart }
-                }
-            },
-            { $group: { _id: null, total: { $sum: '$totalPrice' } } }
-        ]),
-        // 올해 매출
-        Booking.aggregate([
-            {
-                $match: {
-                    ...completedBookingsFilter,
-                    createdAt: { $gte: yearStart }
-                }
-            },
-            { $group: { _id: null, total: { $sum: '$totalPrice' } } }
-        ]),
-        // 오늘 예약 수
-        Booking.countDocuments({
-            status: 'completed',
-            createdAt: { $gte: todayStart }
-        }),
-        // 이번 달 예약 수
-        Booking.countDocuments({
-            status: 'completed',
-            createdAt: { $gte: monthStart }
-        }),
-        // 올해 예약 수
-        Booking.countDocuments({
-            status: 'completed',
-            createdAt: { $gte: yearStart }
-        })
+        Review.countDocuments({ status: 'reported' }),
+        Review.countDocuments({ createdAt: { $gte: todayStart } }),
+        Review.countDocuments({ createdAt: { $gte: monthStart } }),
+        // 쿠폰 통계
+        Promotion.countDocuments(),
+        Promotion.countDocuments({ isActive: true, validUntil: { $gte: now } }),
+        Promotion.countDocuments({ validUntil: { $lt: now } })
     ]);
 
-    // 전일 매출 계산 (어제)
+    // 평균 평점 계산
+    const averageRating = averageRatingResult[0]?.avg || 0;
+
+    // 전일 신규 회원 수 계산 (변화율용)
     const yesterdayStart = new Date(todayStart);
     yesterdayStart.setDate(yesterdayStart.getDate() - 1);
     const yesterdayEnd = new Date(todayStart);
     
-    const yesterdayRevenueResult = await Booking.aggregate([
-        {
-            $match: {
-                ...completedBookingsFilter,
-                createdAt: { $gte: yesterdayStart, $lt: yesterdayEnd }
-            }
-        },
-        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
-    ]);
+    const yesterdayNewUsers = await User.countDocuments({
+        createdAt: { $gte: yesterdayStart, $lt: yesterdayEnd }
+    });
 
-    // 전월 매출 계산
+    // 전월 신규 회원 수 계산
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    const lastMonthRevenueResult = await Booking.aggregate([
-        {
-            $match: {
-                ...completedBookingsFilter,
-                createdAt: { $gte: lastMonthStart, $lt: lastMonthEnd }
-            }
-        },
-        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
-    ]);
-
-    // 전년 매출 계산
-    const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
-    const lastYearEnd = new Date(now.getFullYear(), 0, 1);
-    
-    const lastYearRevenueResult = await Booking.aggregate([
-        {
-            $match: {
-                ...completedBookingsFilter,
-                createdAt: { $gte: lastYearStart, $lt: lastYearEnd }
-            }
-        },
-        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
-    ]);
-
-    const totalRevenue = totalRevenueResult[0]?.total || 0;
-    const todayRevenue = todayRevenueResult[0]?.total || 0;
-    const monthRevenue = monthRevenueResult[0]?.total || 0;
-    const yearRevenue = yearRevenueResult[0]?.total || 0;
-    const yesterdayRevenue = yesterdayRevenueResult[0]?.total || 0;
-    const lastMonthRevenue = lastMonthRevenueResult[0]?.total || 0;
-    const lastYearRevenue = lastYearRevenueResult[0]?.total || 0;
+    const lastMonthNewUsers = await User.countDocuments({
+        createdAt: { $gte: lastMonthStart, $lt: lastMonthEnd }
+    });
 
     // 전일 대비 변화율 계산
-    const todayChange = yesterdayRevenue > 0 
-        ? (todayRevenue - yesterdayRevenue) / yesterdayRevenue 
-        : (todayRevenue > 0 ? 1 : 0);
+    const todayUserChange = yesterdayNewUsers > 0 
+        ? (todayNewUsers - yesterdayNewUsers) / yesterdayNewUsers 
+        : (todayNewUsers > 0 ? 1 : 0);
 
     // 전월 대비 변화율 계산
-    const monthChange = lastMonthRevenue > 0 
-        ? (monthRevenue - lastMonthRevenue) / lastMonthRevenue 
-        : (monthRevenue > 0 ? 1 : 0);
-
-    // 전년 대비 변화율 계산
-    const yearChange = lastYearRevenue > 0 
-        ? (yearRevenue - lastYearRevenue) / lastYearRevenue 
-        : (yearRevenue > 0 ? 1 : 0);
+    const monthUserChange = lastMonthNewUsers > 0 
+        ? (monthNewUsers - lastMonthNewUsers) / lastMonthNewUsers 
+        : (monthNewUsers > 0 ? 1 : 0);
 
     return {
-        totalRevenue,
-        today: {
-            revenue: todayRevenue,
-            bookings: todayBookings,
+        // 회원 통계
+        users: {
+            total: totalUsers,
+            active: activeUsers,
+            today: todayNewUsers,
+            thisMonth: monthNewUsers,
+            thisYear: yearNewUsers,
             change: {
-                revenue: todayChange,
-                bookings: 0
+                today: todayUserChange,
+                thisMonth: monthUserChange
             }
         },
-        thisMonth: {
-            revenue: monthRevenue,
-            bookings: monthBookings,
-            change: {
-                revenue: monthChange,
-                bookings: 0
-            }
+        // 사업자 통계
+        businesses: {
+            total: totalBusinesses,
+            pending: pendingBusinesses,
+            approved: approvedBusinesses,
+            today: todayNewBusinesses,
+            thisMonth: monthNewBusinesses
         },
-        thisYear: {
-            revenue: yearRevenue,
-            bookings: yearBookings,
-            change: {
-                revenue: yearChange,
-                bookings: 0
-            }
+        // 리뷰 통계
+        reviews: {
+            total: totalReviews,
+            averageRating: Math.round(averageRating * 10) / 10, // 소수점 1자리
+            reported: reportedReviews,
+            today: todayNewReviews,
+            thisMonth: monthNewReviews
         },
-        // 기존 카운트 데이터도 포함 (필요시 사용)
-        userCount,
-        pendingBusinessCount,
-        bookingCount,
-        reviewCount
+        // 쿠폰 통계
+        promotions: {
+            total: totalPromotions,
+            active: activePromotions,
+            expired: expiredPromotions
+        }
     };
 };

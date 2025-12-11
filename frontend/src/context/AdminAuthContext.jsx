@@ -59,38 +59,9 @@ export const AdminAuthProvider = ({ children }) => {
     }
   };
 
-  const kakaoLogin = async (kakaoToken) => {
-    try {
-      const response = await adminAuthApi.kakaoLogin(kakaoToken);
-      // axiosClient interceptor가 data만 반환
-      
-      // 추가 정보가 필요한 경우
-      if (response.needsAdditionalInfo) {
-        return {
-          needsAdditionalInfo: true,
-          tempUserId: response.tempUserId,
-        };
-      }
-      
-      // 바로 로그인 가능한 경우
-      const token = response.token;
-      const admin = response.admin || response.business;
-      if (token) {
-        localStorage.setItem("businessToken", token);
-      }
-      setAdminInfo(admin);
-      return {
-        needsAdditionalInfo: false,
-      };
-    } catch (error) {
-      console.error("Kakao login error:", error);
-      throw error;
-    }
-  };
-
   return (
     <AdminAuthContext.Provider
-      value={{ adminInfo, loading, login, logout, checkAuth, kakaoLogin }}
+      value={{ adminInfo, loading, login, logout, checkAuth }}
     >
       {children}
     </AdminAuthContext.Provider>

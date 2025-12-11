@@ -16,6 +16,13 @@ router.get(
     reviewController.getAllReviews
 );
 
+// 1-1. 리뷰 상세 조회 (관리자, Staff)
+router.get(
+    '/:id',
+    authorize('admin', 'staff'),
+    reviewController.getReviewById
+);
+
 // 2. 리뷰 숨김/공개 처리 (관리자, Staff)
 router.patch(
     '/:id/visibility',
@@ -23,7 +30,14 @@ router.patch(
     reviewController.toggleReviewVisibility
 );
 
-// 3. 리뷰 신고 접수 (사업자 전용)
+// 3. 리뷰 답변 작성 (관리자, Staff)
+router.post(
+    '/:id/reply',
+    authorize('admin', 'staff'),
+    reviewController.replyToReview
+);
+
+// 4. 리뷰 신고 접수 (사업자 전용)
 router.post(
     '/:id/report',
     authorize('business'),

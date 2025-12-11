@@ -15,7 +15,7 @@ const AdminFooter = () => {
             <Link to="/admin/dashboard">대시보드</Link>
             <Link to="/admin/settings">호텔 관리</Link>
             <Link to="/admin/rooms">객실 관리</Link>
-            <Link to="/admin/statistics">매출 통계</Link>
+            <Link to="/admin/statistics">운영 통계</Link>
           </div>
 
           <div className="business-footer__section">

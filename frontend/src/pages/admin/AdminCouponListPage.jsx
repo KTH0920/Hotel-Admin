@@ -63,6 +63,10 @@ const AdminCouponListPage = () => {
   };
 
   const handleDelete = (id) => {
+    if (!id) {
+      setAlertModal({ isOpen: true, message: "쿠폰 ID가 없습니다.", type: "error" });
+      return;
+    }
     setConfirmDialog({
       isOpen: true,
       message: "정말 이 쿠폰을 삭제하시겠습니까?",
@@ -72,7 +76,7 @@ const AdminCouponListPage = () => {
           setAlertModal({ isOpen: true, message: "쿠폰이 삭제되었습니다.", type: "success" });
           fetchCoupons();
         } catch (err) {
-          setAlertModal({ isOpen: true, message: "쿠폰 삭제에 실패했습니다.", type: "error" });
+          setAlertModal({ isOpen: true, message: err.message || "쿠폰 삭제에 실패했습니다.", type: "error" });
         } finally {
           setConfirmDialog({ isOpen: false, message: "", onConfirm: null });
         }
@@ -110,7 +114,15 @@ const AdminCouponListPage = () => {
             <AdminCouponTable
               coupons={coupons}
               onStatusChange={(id, status) => {
-                adminCouponApi.updateCouponStatus(id, status).then(() => fetchCoupons());
+                if (!id) {
+                  console.error("쿠폰 ID가 없습니다.");
+                  return;
+                }
+                // status를 isActive로 변환
+                const isActive = status === "active";
+                adminCouponApi.updateCoupon(id, { isActive }).then(() => fetchCoupons()).catch((err) => {
+                  setAlertModal({ isOpen: true, message: err.message || "상태 변경에 실패했습니다.", type: "error" });
+                });
               }}
               onDelete={handleDelete}
             />

@@ -134,10 +134,21 @@ const AdminDashboardPage = () => {
     );
   }
 
-  // 통계 데이터 계산
-  const totalRevenue = statistics?.totalRevenue || statistics?.thisYear?.revenue || 0;
-  const todayRevenue = statistics?.today?.revenue || 0;
-  const thisMonthRevenue = statistics?.thisMonth?.revenue || 0;
+  // 운영 통계 데이터 계산
+  const totalUsers = statistics?.users?.total || 0;
+  const activeUsers = statistics?.users?.active || 0;
+  const todayNewUsers = statistics?.users?.today || 0;
+  
+  const totalBusinesses = statistics?.businesses?.total || 0;
+  const pendingBusinesses = statistics?.businesses?.pending || 0;
+  const approvedBusinesses = statistics?.businesses?.approved || 0;
+  
+  const totalReviews = statistics?.reviews?.total || 0;
+  const averageRating = statistics?.reviews?.averageRating || 0;
+  const reportedReviews = statistics?.reviews?.reported || 0;
+  
+  const activePromotions = statistics?.promotions?.active || 0;
+  const expiredPromotions = statistics?.promotions?.expired || 0;
 
   // 사업자 데이터
   const totalOwners = business?.summary?.totalOwners || 0;
@@ -151,16 +162,16 @@ const AdminDashboardPage = () => {
   const activeCoupons = allCoupons.filter((c) => c.status === "active").length;
   const usedCoupons = allCoupons.reduce((sum, c) => sum + (c.usedCount || 0), 0);
 
-  // 리뷰 데이터
+  // 리뷰 데이터 (리뷰 관리 카드용 - statistics에 없는 상세 정보)
   const allReviews = reviews?.reviews || reviews || [];
-  const reportedReviews = allReviews.filter((r) => r.status === "reported").length;
+  const reportedReviewsFromList = allReviews.filter((r) => r.status === "reported").length;
   const approvedReviews = allReviews.filter((r) => r.status === "approved").length;
   const rejectedReviews = allReviews.filter((r) => r.status === "rejected").length;
 
-  // 회원 데이터
+  // 회원 데이터 (회원 관리 카드용 - statistics에 없는 상세 정보)
   const allUsers = Array.isArray(users) ? users : [];
-  const totalUsers = allUsers.length;
-  const activeUsers = allUsers.filter((u) => u.status === "active").length;
+  const totalUsersFromList = allUsers.length;
+  const activeUsersFromList = allUsers.filter((u) => u.status === "active").length;
   const bannedUsers = allUsers.filter((u) => u.status === "banned").length;
   
   // 사업자 유저 수 (business 데이터에서)
@@ -169,13 +180,14 @@ const AdminDashboardPage = () => {
   const dashboardCards = [
     {
       id: "statistics",
-      title: "매출 통계",
+      title: "운영 통계",
       icon: <StatisticsIcon />,
       path: "/admin/statistics",
       stats: [
-        { label: "총 매출", value: `${formatCurrency(totalRevenue)}원` },
-        { label: "오늘 매출", value: `${formatCurrency(todayRevenue)}원` },
-        { label: "이번 달 매출", value: `${formatCurrency(thisMonthRevenue)}원` },
+        { label: "전체 회원", value: `${formatNumber(totalUsers)}명` },
+        { label: "전체 사업자", value: `${formatNumber(totalBusinesses)}명` },
+        { label: "전체 리뷰", value: `${formatNumber(totalReviews)}개` },
+        { label: "평균 평점", value: averageRating > 0 ? `${averageRating.toFixed(1)}점` : "0점" },
       ],
       color: "#7FD8BE",
     },
@@ -210,7 +222,7 @@ const AdminDashboardPage = () => {
       icon: <ReviewIcon />,
       path: "/admin/reviews",
       stats: [
-        { label: "신고된 리뷰", value: `${formatNumber(reportedReviews)}개`, highlight: reportedReviews > 0 },
+        { label: "신고된 리뷰", value: `${formatNumber(reportedReviewsFromList)}개`, highlight: reportedReviewsFromList > 0 },
         { label: "승인된 리뷰", value: `${formatNumber(approvedReviews)}개` },
         { label: "거부된 리뷰", value: `${formatNumber(rejectedReviews)}개` },
       ],
@@ -222,9 +234,9 @@ const AdminDashboardPage = () => {
       icon: <UsersIcon />,
       path: "/admin/users",
       stats: [
-        { label: "일반 유저", value: `${formatNumber(totalUsers)}명` },
+        { label: "일반 유저", value: `${formatNumber(totalUsersFromList)}명` },
         { label: "사업자 유저", value: `${formatNumber(totalBusinessUsers)}명` },
-        { label: "활성 유저", value: `${formatNumber(activeUsers)}명` },
+        { label: "활성 유저", value: `${formatNumber(activeUsersFromList)}명` },
         { label: "정지 유저", value: `${formatNumber(bannedUsers)}명`, highlight: bannedUsers > 0 },
       ],
       color: "#10B981",

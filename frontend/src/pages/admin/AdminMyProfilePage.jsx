@@ -28,13 +28,8 @@ const AdminMyProfilePage = () => {
   };
 
   const handleSubmit = async (data) => {
-    try {
-      await adminAuthApi.updateProfile(data);
-      setAlertModal({ isOpen: true, message: "프로필이 저장되었습니다.", type: "success" });
-      fetchProfile();
-    } catch (err) {
-      setAlertModal({ isOpen: true, message: "저장에 실패했습니다.", type: "error" });
-    }
+    // 프로필 업데이트 기능은 현재 지원하지 않습니다.
+    setAlertModal({ isOpen: true, message: "프로필 수정 기능은 현재 지원하지 않습니다.", type: "info" });
   };
 
   if (loading) return <Loader fullScreen />;

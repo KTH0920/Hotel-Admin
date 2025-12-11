@@ -47,9 +47,11 @@ const StatusBadge = ({ status, type = "booking" }) => {
 
     if (type === "business") {
       const statusMap = {
-        active: { label: "운영 중", className: "badge-success" },
+        approved: { label: "승인됨", className: "badge-success" },
         pending: { label: "심사 중", className: "badge-warning" },
         suspended: { label: "중지", className: "badge-danger" },
+        rejected: { label: "거절됨", className: "badge-secondary" },
+        active: { label: "운영 중", className: "badge-success" }, // 호환성을 위해 유지
       };
       return (
         statusMap[status] || { label: status, className: "badge-secondary" }

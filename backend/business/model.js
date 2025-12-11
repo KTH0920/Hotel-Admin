@@ -70,5 +70,6 @@ businessSchema.methods.comparePassword = async function (inputPassword) {
 };
 
 // 모델 생성 및 내보내기
-const Business = mongoose.model('Business', businessSchema);
+// businessusers 컬렉션을 사용하도록 명시적으로 지정
+const Business = mongoose.model('Business', businessSchema, 'businessusers');
 export default Business;

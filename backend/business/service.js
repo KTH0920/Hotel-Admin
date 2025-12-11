@@ -1,11 +1,23 @@
 import Business from './model.js'; // 확장자 .js 필수
 
-// 서비스 1: 사업자 목록 조회 (상태 필터링)
-export const getBusinesses = async (status) => {
+// 서비스 1: 사업자 목록 조회 (상태 필터링 및 검색)
+export const getBusinesses = async (status, search) => {
     const query = {};
+    
+    // 상태 필터링
     if (status) {
         query.status = status;
     }
+    
+    // 검색 필터 (이름, 이메일, 상호명으로 검색)
+    if (search) {
+        query.$or = [
+            { name: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } },
+            { companyName: { $regex: search, $options: 'i' } }
+        ];
+    }
+    
     // 비밀번호 제외하고 조회, 최신 가입순 정렬
     const businesses = await Business.find(query)
         .select('-password')
@@ -31,19 +43,25 @@ export const updateBusinessStatus = async (id, status, adminNotes) => {
         throw new Error('유효하지 않은 상태 값입니다.');
     }
 
-    const business = await Business.findById(id);
+    // 업데이트할 필드 구성
+    const updateData = { status };
+    if (adminNotes !== undefined) {
+        updateData.adminNotes = adminNotes;
+    }
+
+    // findByIdAndUpdate를 사용하여 validation을 건너뛰고 상태만 업데이트
+    const business = await Business.findByIdAndUpdate(
+        id,
+        updateData,
+        { 
+            new: true, // 업데이트된 문서 반환
+            runValidators: false // validation 건너뛰기 (상태만 업데이트하므로)
+        }
+    ).select('-password');
+
     if (!business) {
         throw new Error('파트너를 찾을 수 없습니다.');
     }
 
-    // 상태 업데이트
-    business.status = status;
-
-    // 관리자 메모 업데이트
-    if (adminNotes) {
-        business.adminNotes = adminNotes;
-    }
-
-    await business.save();
     return business;
 };

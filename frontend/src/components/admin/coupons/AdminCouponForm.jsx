@@ -18,17 +18,27 @@ const AdminCouponForm = ({ coupon, onSubmit, onCancel, loading }) => {
 
   useEffect(() => {
     if (coupon) {
+      // 백엔드 데이터를 프론트엔드 폼 형식으로 변환
+      const validUntil = coupon.validUntil 
+        ? new Date(coupon.validUntil).toISOString().split('T')[0]
+        : "";
+      const createdAt = coupon.createdAt 
+        ? new Date(coupon.createdAt).toISOString().split('T')[0]
+        : "";
+
       setFormData({
-        name: coupon.name || "",
+        name: coupon.name || coupon.title || "",
         code: coupon.code || "",
-        type: coupon.type || "percentage",
-        value: coupon.value || 0,
+        type: coupon.discountPercentage !== undefined ? "percentage" : (coupon.type || "percentage"),
+        value: coupon.discountPercentage || coupon.value || 0,
         minAmount: coupon.minAmount || 0,
         maxDiscount: coupon.maxDiscount || 0,
-        validFrom: coupon.validFrom || "",
-        validTo: coupon.validTo || "",
+        validFrom: createdAt, // 백엔드에는 validFrom이 없으므로 createdAt 사용
+        validTo: validUntil,
         usageLimit: coupon.usageLimit || "",
-        status: coupon.status || "active",
+        status: coupon.isActive !== undefined 
+          ? (coupon.isActive ? "active" : "inactive")
+          : (coupon.status || "active"),
       });
     }
   }, [coupon]);

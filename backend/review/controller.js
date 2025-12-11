@@ -13,6 +13,16 @@ export const getAllReviews = async (req, res) => {
     }
 };
 
+// 1-1. 리뷰 상세 조회
+export const getReviewById = async (req, res) => {
+    try {
+        const review = await reviewService.getReviewById(req.params.id);
+        res.status(200).json(successResponse(review, "리뷰 상세 조회 성공"));
+    } catch (error) {
+        res.status(404).json(errorResponse(error.message, 404));
+    }
+};
+
 // 2. 숨김/공개 토글
 export const toggleReviewVisibility = async (req, res) => {
     try {
@@ -49,7 +59,22 @@ export const createReview = async (req, res) => {
     }
 };
 
-// 5. 리뷰 완전 삭제
+// 5. 리뷰 답변 작성
+export const replyToReview = async (req, res) => {
+    try {
+        const { reply } = req.body;
+        if (!reply || reply.trim() === '') {
+            return res.status(400).json(errorResponse("답변 내용을 입력해주세요.", 400));
+        }
+        
+        const review = await reviewService.replyToReview(req.params.id, reply);
+        res.status(200).json(successResponse(review, "리뷰 답변이 작성되었습니다."));
+    } catch (error) {
+        res.status(404).json(errorResponse(error.message, 404));
+    }
+};
+
+// 6. 리뷰 완전 삭제
 export const deleteReview = async (req, res) => {
     try {
         await reviewService.deleteReview(req.params.id);

@@ -48,6 +48,13 @@ const reviewSchema = new mongoose.Schema({
     reportReason: { // 신고 사유
         type: String,
         default: '',
+    },
+    reply: { // 관리자 답변
+        type: String,
+        default: '',
+    },
+    replyAt: { // 답변 작성 일시
+        type: Date,
     }
 }, {
     timestamps: true

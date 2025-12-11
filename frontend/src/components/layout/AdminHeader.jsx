@@ -41,7 +41,7 @@ const AdminHeader = () => {
               to="/admin/statistics"
               className={`business-header__nav-link ${isActive("/admin/statistics")}`}
             >
-              매출 통계
+              운영 통계
             </Link>
             <Link
               to="/admin/reviews"

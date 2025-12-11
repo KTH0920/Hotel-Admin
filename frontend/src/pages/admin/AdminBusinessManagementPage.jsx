@@ -3,6 +3,8 @@ import StatusBadge from "../../components/common/StatusBadge";
 import Loader from "../../components/common/Loader";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import EmptyState from "../../components/common/EmptyState";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
+import AlertModal from "../../components/common/AlertModal";
 import { adminBusinessApi } from "../../api/adminBusinessApi";
 
 const STATUS_FILTERS = [
@@ -19,6 +21,8 @@ const AdminBusinessManagementPage = () => {
   const [filterInputs, setFilterInputs] = useState(filters);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState(null);
+  const [alertModal, setAlertModal] = useState({ isOpen: false, message: "", type: "info" });
 
   useEffect(() => {
     fetchOwners();
@@ -28,8 +32,17 @@ const AdminBusinessManagementPage = () => {
   const fetchOwners = async () => {
     try {
       setLoading(true);
+      // 프론트엔드 상태를 백엔드 상태로 매핑
+      const statusMap = {
+        "all": "all",
+        "active": "approved", // 프론트엔드 "active" → 백엔드 "approved"
+        "pending": "pending",
+        "suspended": "suspended",
+      };
+      const backendStatus = statusMap[filters.status] || filters.status;
+      
       const data = await adminBusinessApi.getOwners({
-        status: filters.status,
+        status: backendStatus,
         search: filters.search || undefined,
       });
       setOwners(data.owners || []);
@@ -54,6 +67,40 @@ const AdminBusinessManagementPage = () => {
     const defaults = { status: "all", search: "" };
     setFilterInputs(defaults);
     setFilters(defaults);
+  };
+
+  const handleStatusChange = async (ownerId, newStatus) => {
+    try {
+      // 백엔드는 "approved", "pending", "suspended", "rejected" 형식을 사용
+      await adminBusinessApi.updateOwnerStatus(ownerId, newStatus);
+      setAlertModal({ isOpen: true, message: "사업자 상태가 변경되었습니다.", type: "success" });
+      setConfirmDialog(null);
+      fetchOwners();
+    } catch (err) {
+      setAlertModal({ isOpen: true, message: err.message || "상태 변경에 실패했습니다.", type: "error" });
+      setConfirmDialog(null);
+    }
+  };
+
+  const openStatusChangeDialog = (ownerId, currentStatus, newStatus) => {
+    const statusLabels = {
+      pending: "심사 중",
+      approved: "승인됨",
+      suspended: "중지",
+      rejected: "거절됨",
+    };
+    
+    const newStatusLabel = statusLabels[newStatus] || newStatus;
+    const currentStatusLabel = statusLabels[currentStatus] || currentStatus;
+
+    setConfirmDialog({
+      title: "상태 변경 확인",
+      message: `이 사업자의 상태를 "${currentStatusLabel}"에서 "${newStatusLabel}"로 변경하시겠습니까?`,
+      onConfirm: () => {
+        handleStatusChange(ownerId, newStatus);
+      },
+      onCancel: () => setConfirmDialog(null),
+    });
   };
 
   const aggregatedHotels = useMemo(() => {
@@ -108,10 +155,10 @@ const AdminBusinessManagementPage = () => {
         </div>
         <div className="stat-card">
           <div className="stat-card-header">
-            <p className="stat-label">리스크 호텔</p>
+            <p className="stat-label">중지됨</p>
           </div>
-          <p className="stat-value">{summary?.riskHotels ?? 0}개</p>
-          <p className="stat-change negative">점검 필요</p>
+          <p className="stat-value">{summary?.suspendedOwners ?? 0}명</p>
+          <p className="stat-change negative">운영 중지된 사업자</p>
         </div>
       </div>
 
@@ -170,20 +217,23 @@ const AdminBusinessManagementPage = () => {
                   <th>최근 점검 상태</th>
                   <th>이슈</th>
                   <th>상태</th>
+                  <th>작업</th>
                 </tr>
               </thead>
               <tbody>
                 {owners.map((owner) => {
+                  const ownerId = owner.id || owner._id;
                   const primaryHotel = owner.hotels?.[0];
+                  const currentStatus = owner.status;
                   return (
-                    <tr key={owner.id}>
+                    <tr key={ownerId}>
                       <td>
-                        <p className="owner-name">{owner.name}</p>
+                        <p className="owner-name">{owner.name || owner.companyName}</p>
                         <p className="owner-meta">{owner.email}</p>
                       </td>
                       <td>
-                        <p>{owner.phone || "-"}</p>
-                        <p className="owner-meta">가입일 {owner.joinedAt}</p>
+                        <p>{owner.phone || owner.phoneNumber || "-"}</p>
+                        <p className="owner-meta">가입일 {owner.joinedAt || (owner.createdAt ? new Date(owner.createdAt).toLocaleDateString() : "-")}</p>
                       </td>
                       <td>
                         <p>
@@ -217,7 +267,51 @@ const AdminBusinessManagementPage = () => {
                         )}
                       </td>
                       <td>
-                        <StatusBadge status={owner.status} type="business" />
+                        <StatusBadge status={currentStatus} type="business" />
+                      </td>
+                      <td>
+                        <div className="action-buttons">
+                          {currentStatus === "pending" && (
+                            <>
+                              <button
+                                className="btn btn-sm btn-success"
+                                onClick={() => openStatusChangeDialog(ownerId, currentStatus, "approved")}
+                              >
+                                승인
+                              </button>
+                              <button
+                                className="btn btn-sm btn-danger"
+                                onClick={() => openStatusChangeDialog(ownerId, currentStatus, "rejected")}
+                              >
+                                거절
+                              </button>
+                            </>
+                          )}
+                          {currentStatus === "approved" && (
+                            <button
+                              className="btn btn-sm btn-danger"
+                              onClick={() => openStatusChangeDialog(ownerId, currentStatus, "suspended")}
+                            >
+                              중지
+                            </button>
+                          )}
+                          {currentStatus === "suspended" && (
+                            <button
+                              className="btn btn-sm btn-success"
+                              onClick={() => openStatusChangeDialog(ownerId, currentStatus, "approved")}
+                            >
+                              재개
+                            </button>
+                          )}
+                          {currentStatus === "rejected" && (
+                            <button
+                              className="btn btn-sm btn-success"
+                              onClick={() => openStatusChangeDialog(ownerId, currentStatus, "approved")}
+                            >
+                              승인
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -276,6 +370,23 @@ const AdminBusinessManagementPage = () => {
           </div>
         )}
       </div>
+
+      {confirmDialog && (
+        <ConfirmDialog
+          isOpen={!!confirmDialog}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={confirmDialog.onCancel}
+        />
+      )}
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        message={alertModal.message}
+        type={alertModal.type}
+        onClose={() => setAlertModal({ isOpen: false, message: "", type: "info" })}
+      />
     </div>
   );
 };

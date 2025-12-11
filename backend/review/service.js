@@ -23,6 +23,20 @@ export const getReviews = async ({ lodgingId, isVisible, status }) => {
     return reviews;
 };
 
+// 서비스 1-1: 특정 리뷰 상세 조회
+export const getReviewById = async (id) => {
+    const review = await Review.findById(id)
+        .populate('user', 'name email status')
+        .populate('lodging', 'name')
+        .populate('booking', 'checkIn checkOut');
+    
+    if (!review) {
+        throw new Error('리뷰를 찾을 수 없습니다.');
+    }
+    
+    return review;
+};
+
 // 서비스 2: 리뷰 숨김/공개 처리 (관리자)
 export const toggleVisibility = async (id, isVisible, adminComment) => {
     const updateData = {
@@ -71,7 +85,24 @@ export const createReview = async (data) => {
     return review;
 };
 
-// 서비스 5: 리뷰 완전 삭제 (Hard Delete) - 관리자 전용
+// 서비스 5: 리뷰 답변 작성 (관리자)
+export const replyToReview = async (id, reply) => {
+    const review = await Review.findByIdAndUpdate(
+        id,
+        { reply, replyAt: new Date() },
+        { new: true }
+    )
+    .populate('user', 'name email status')
+    .populate('lodging', 'name');
+    
+    if (!review) {
+        throw new Error('리뷰를 찾을 수 없습니다.');
+    }
+    
+    return review;
+};
+
+// 서비스 6: 리뷰 완전 삭제 (Hard Delete) - 관리자 전용
 export const deleteReview = async (id) => {
     const review = await Review.findByIdAndDelete(id);
     if (!review) {

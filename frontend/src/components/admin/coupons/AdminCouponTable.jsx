@@ -6,10 +6,18 @@ const AdminCouponTable = ({ coupons, onStatusChange, onDelete }) => {
     `${new Intl.NumberFormat("ko-KR").format(amount)}원`;
 
   const formatDiscount = (coupon) => {
+    // 백엔드 모델: discountPercentage 사용
+    if (coupon.discountPercentage !== undefined) {
+      return `${coupon.discountPercentage}%`;
+    }
+    // 프론트엔드 형식도 지원
     if (coupon.type === "percentage") {
       return `${coupon.value}%`;
     }
-    return formatCurrency(coupon.value);
+    if (coupon.value) {
+      return formatCurrency(coupon.value);
+    }
+    return "-";
   };
 
   return (
@@ -28,51 +36,54 @@ const AdminCouponTable = ({ coupons, onStatusChange, onDelete }) => {
           </tr>
         </thead>
         <tbody>
-          {coupons.map((coupon) => (
-            <tr key={coupon.id}>
-              <td>
-                <Link to={`/admin/coupons/${coupon.id}`} className="link-primary">
-                  {coupon.name}
-                </Link>
-              </td>
-              <td>
-                <code style={{ background: "#f1f5f9", padding: "0.25rem 0.5rem", borderRadius: "4px" }}>
-                  {coupon.code}
-                </code>
-              </td>
-              <td>{formatDiscount(coupon)}</td>
-              <td>{coupon.minAmount ? formatCurrency(coupon.minAmount) : "-"}</td>
-              <td>
-                <div style={{ fontSize: "0.875rem" }}>
-                  <div>{coupon.validFrom}</div>
-                  <div style={{ color: "#64748b" }}>~ {coupon.validTo}</div>
-                </div>
-              </td>
-              <td>
-                {coupon.usedCount} / {coupon.usageLimit || "∞"}
-              </td>
-              <td>
-                <StatusBadge status={coupon.status} type="coupon" />
-              </td>
-              <td>
-                <div className="coupon-actions">
-                  <Link
-                    to={`/admin/coupons/${coupon.id}/edit`}
-                    className="btn btn-sm btn-outline"
-                  >
-                    수정
+          {coupons.map((coupon) => {
+            const couponId = coupon.id || coupon._id;
+            return (
+              <tr key={couponId}>
+                <td>
+                  <Link to={`/admin/coupons/${couponId}`} className="link-primary">
+                    {coupon.name || coupon.title}
                   </Link>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-danger"
-                    onClick={() => onDelete(coupon.id)}
-                  >
-                    삭제
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
+                </td>
+                <td>
+                  <code style={{ background: "#f1f5f9", padding: "0.25rem 0.5rem", borderRadius: "4px" }}>
+                    {coupon.code}
+                  </code>
+                </td>
+                <td>{formatDiscount(coupon)}</td>
+                <td>{coupon.minAmount ? formatCurrency(coupon.minAmount) : "-"}</td>
+                <td>
+                  <div style={{ fontSize: "0.875rem" }}>
+                    <div>{coupon.validFrom || new Date(coupon.createdAt).toLocaleDateString()}</div>
+                    <div style={{ color: "#64748b" }}>~ {coupon.validTo || new Date(coupon.validUntil).toLocaleDateString()}</div>
+                  </div>
+                </td>
+                <td>
+                  {coupon.usedCount || 0} / {coupon.usageLimit || "∞"}
+                </td>
+                <td>
+                  <StatusBadge status={coupon.status || (coupon.isActive ? "active" : "inactive")} type="coupon" />
+                </td>
+                <td>
+                  <div className="coupon-actions">
+                    <Link
+                      to={`/admin/coupons/${couponId}/edit`}
+                      className="btn btn-sm btn-outline"
+                    >
+                      수정
+                    </Link>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-danger"
+                      onClick={() => onDelete(couponId)}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
